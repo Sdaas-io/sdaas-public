@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: Build, lint, and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+      - name: Lint
+        run: pnpm lint
+
+  verify-fixtures:
+    name: Verify test fixtures pass and tampered ones fail
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Valid fixture — should verify
+        working-directory: examples/node-verify
+        run: node index.mjs valid
+
+      - name: Tampered fixture — should fail (exit 1)
+        working-directory: examples/node-verify
+        run: |
+          node index.mjs tampered && echo "FAIL: tampered fixture should have failed" && exit 1 || echo "PASS: tampered fixture correctly rejected"
+
+      - name: Bad signature — should fail
+        working-directory: examples/node-verify
+        run: |
+          node index.mjs bad_signature && echo "FAIL: bad_signature fixture should have failed" && exit 1 || echo "PASS: bad_signature fixture correctly rejected"
+
+      - name: Missing fields — should fail
+        working-directory: examples/node-verify
+        run: |
+          node index.mjs missing_fields && echo "FAIL: missing_fields fixture should have failed" && exit 1 || echo "PASS: missing_fields fixture correctly rejected"
+
+  python-verify:
+    name: Python verifier smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python deps
+        run: pip install -r examples/python-verify/requirements.txt
+
+      - name: Valid fixture — should verify
+        run: python examples/python-verify/verify.py examples/fixtures/manifest.valid.json examples/fixtures/keypair.test.json
+
+      - name: Tampered fixture — should fail
+        run: |
+          python examples/python-verify/verify.py examples/fixtures/manifest.tampered.json examples/fixtures/keypair.test.json \
+            && echo "FAIL: should have rejected" && exit 1 \
+            || echo "PASS: tampered correctly rejected"
