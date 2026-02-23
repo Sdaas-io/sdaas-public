@@ -1,0 +1,34 @@
+{
+  "name": "@sdaas/schema-gen",
+  "version": "0.1.0",
+  "description": "Generate SDAAS.io manifest scaffolding from field maps or JSON schemas",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "sdaas-schema-gen": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test",
+    "lint": "node -e \"process.exit(0)\""
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "keywords": ["sdaas", "schema", "manifest", "synthetic-data", "cli"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sdaas-io/sdaas-public.git",
+    "directory": "packages/schema-gen"
+  }
+}

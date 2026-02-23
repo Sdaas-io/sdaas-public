@@ -1,0 +1,7 @@
+{
+  "schema_version": "sdaas.manifest.v1",
+  "payload": {
+    "schema_version": "cert.v1"
+  },
+  "_note": "Missing signature field. Shape validation should fail."
+}

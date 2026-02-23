@@ -1,0 +1,273 @@
+openapi: 3.0.3
+info:
+  title: SDAAS.io Verification API
+  version: "1.0.0"
+  description: |
+    Public endpoints for fetching and verifying SDAAS.io certificate manifests.
+
+    Certificates are issued by SDAAS.io and signed with Ed25519. Verification
+    can be performed independently without trusting any server response:
+
+    1. Fetch the manifest envelope from `/api/cert/{id}/manifest`
+    2. Fetch the public key from `/.well-known/signing-keys.json`
+    3. Verify the Ed25519 signature using `@sdaas/verify`
+
+    Canonicalization rule: `json-stable-stringify(stripUndefined(payload))` → UTF-8 bytes
+  contact:
+    email: support@sdaas.io
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://sdaas.io
+    description: Production
+
+paths:
+  /api/cert/{id}/manifest:
+    get:
+      operationId: getCertManifest
+      summary: Get signed certificate manifest
+      description: |
+        Returns the signed certificate manifest envelope for the given certificate ID.
+
+        The `payload` field is exactly what was signed. The `signature` field contains
+        the detached Ed25519 signature and key ID.
+
+        This response is immutable and strongly cached (`Cache-Control: public, max-age=31536000, immutable`).
+        Certificates are never modified after issuance.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Certificate UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Signed manifest envelope
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: "application/sdaas.manifest+json; charset=utf-8"
+            Cache-Control:
+              schema:
+                type: string
+                example: "public, max-age=31536000, immutable"
+          content:
+            application/sdaas.manifest+json:
+              schema:
+                $ref: "#/components/schemas/ManifestEnvelope"
+        "404":
+          description: Certificate not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: CERT_NOT_FOUND
+                message: Certificate not found.
+
+  /verify/{id}/status:
+    get:
+      operationId: getVerifyStatus
+      summary: Machine-friendly verification status
+      description: |
+        Returns server-side verification result for a certificate.
+
+        Includes:
+        - Whether the signature verified cryptographically
+        - The algorithm and key ID used
+        - Whether the certificate is revoked
+        - A `checked_at` timestamp
+
+        Note: This is the server's verification result. For independent verification,
+        use the manifest endpoint + `@sdaas/verify`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Certificate UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Verification status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyStatusResponse"
+        "404":
+          description: Certificate not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /.well-known/signing-keys.json:
+    get:
+      operationId: getSigningKeys
+      summary: Published Ed25519 public keys
+      description: |
+        Returns the list of active Ed25519 signing public keys used by SDAAS.io.
+
+        Use this to independently verify certificate signatures without trusting
+        any server-side claim.
+
+        Cached for 1 hour (`Cache-Control: public, max-age=3600`).
+      responses:
+        "200":
+          description: Signing keys
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SigningKeysResponse"
+
+components:
+  schemas:
+    ManifestEnvelope:
+      type: object
+      required: [schema_version, payload, signature]
+      properties:
+        schema_version:
+          type: string
+          enum: ["sdaas.manifest.v1"]
+        payload:
+          type: object
+          description: The cert.v1 payload — exactly what was signed.
+          properties:
+            schema_version:
+              type: string
+              example: "cert.v1"
+            certificate_id:
+              type: string
+              format: uuid
+            certificate_type:
+              type: string
+              enum: [GENESIS, REPLICA]
+            issued_at:
+              type: string
+              format: date-time
+            issuer:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "SDAAS.io"
+                environment:
+                  type: string
+                  enum: [production, development]
+                signing_key_id:
+                  type: string
+                signature_alg:
+                  type: string
+            subject:
+              type: object
+              properties:
+                org_id:
+                  type: string
+                user_id:
+                  type: string
+                project:
+                  type: string
+                dataset_name:
+                  type: string
+            hashes:
+              type: object
+              properties:
+                certificate_payload_sha256:
+                  type: string
+                  description: "Hex SHA-256 of canonical payload bytes"
+                datasets:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    properties:
+                      sha256:
+                        type: string
+                      size_bytes:
+                        type: integer
+                      row_count:
+                        type: integer
+        signature:
+          type: object
+          required: [alg, key_id, value]
+          properties:
+            alg:
+              type: string
+              enum: [Ed25519, HMAC-SHA256]
+              description: "Only Ed25519 is independently verifiable."
+            key_id:
+              type: string
+              nullable: true
+            value:
+              type: string
+              nullable: true
+              description: Base64-encoded signature bytes
+
+    VerifyStatusResponse:
+      type: object
+      properties:
+        cert_id:
+          type: string
+        verified:
+          type: boolean
+        status:
+          type: string
+          nullable: true
+          example: "ISSUED"
+        signature_verified:
+          type: boolean
+          nullable: true
+        alg:
+          type: string
+          nullable: true
+        key_id:
+          type: string
+          nullable: true
+        checked_at:
+          type: string
+          format: date-time
+
+    SigningKeysResponse:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/SigningKey"
+        issuer:
+          type: string
+          example: "SDAAS.io"
+        documentation:
+          type: string
+          example: "https://sdaas.io/verification-framework"
+
+    SigningKey:
+      type: object
+      properties:
+        key_id:
+          type: string
+        algorithm:
+          type: string
+          enum: [Ed25519]
+        public_key_pem:
+          type: string
+          description: PEM-formatted Ed25519 public key (SPKI format)
+        status:
+          type: string
+          enum: [active, revoked]
+        created_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string

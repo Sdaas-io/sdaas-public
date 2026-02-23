@@ -1,0 +1,7 @@
+{
+  "note": "TEST ONLY — not used in production. For running examples locally.",
+  "key_id": "test-key-fixture-1",
+  "algorithm": "Ed25519",
+  "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAGgrVBlWeiRoUhb+T7/VWqnVtBF+NGFQU+8pistoEbgI=\n-----END PUBLIC KEY-----\n",
+  "private_key_pem": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIIKxuQmLsFyPRYR662SIgeGK1qoGc8q6RJaqgoRf5d3I\n-----END PRIVATE KEY-----\n"
+}

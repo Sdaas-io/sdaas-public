@@ -1,0 +1,11 @@
+{
+  "name": "node-fetch-and-verify-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@sdaas/sdk": "workspace:*"
+  }
+}

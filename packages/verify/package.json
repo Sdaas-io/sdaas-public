@@ -1,0 +1,35 @@
+{
+  "name": "@sdaas/verify",
+  "version": "0.1.0",
+  "description": "Verify SDAAS.io certificate manifests — Ed25519 signature + payload canonicalization",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test dist/index.test.js",
+    "lint": "node -e \"process.exit(0)\""
+  },
+  "dependencies": {
+    "json-stable-stringify": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/json-stable-stringify": "^1.0.36",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "keywords": ["sdaas", "certificate", "verify", "ed25519", "synthetic-data"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sdaas-io/sdaas-public.git",
+    "directory": "packages/verify"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "node-verify-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@sdaas/verify": "workspace:*"
+  }
+}
